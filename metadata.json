@@ -1,0 +1,9 @@
+{
+  "name": "WildGuard AI",
+  "description": "An AI-powered wildlife detection and real-time early warning system for human-wildlife conflict mitigation, featuring automated alerts and an eSewa-integrated conservation portal.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

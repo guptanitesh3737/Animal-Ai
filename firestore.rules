@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validations ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'location', 'landSize', 'crops', 'createdAt'])
+        && data.keys().size() == 6
+        && data.uid == request.auth.uid
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.location is string && data.location.size() <= 200
+        && data.landSize is number && data.landSize >= 0
+        && data.crops is list
+        && data.createdAt == request.time;
+    }
+
+    function isValidScan(data) {
+      return data.keys().hasAll(['userId', 'scanId', 'cropName', 'diseaseName', 'severity', 'confidence', 'imageUrl', 'timestamp'])
+        && data.keys().size() == 8
+        && data.userId == request.auth.uid
+        && data.scanId is string
+        && data.cropName is string && data.cropName.size() <= 100
+        && data.diseaseName is string && data.diseaseName.size() <= 100
+        && data.severity in ['Low', 'Medium', 'High']
+        && data.confidence is number
+        && data.imageUrl is string
+        && data.timestamp == request.time;
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['userId', 'scanId', 'isCorrect', 'timestamp'])
+        && data.keys().size() == 4
+        && data.userId == request.auth.uid
+        && data.scanId is string
+        && data.isCorrect is bool
+        && data.timestamp == request.time;
+    }
+
+    function isValidChat(data) {
+      return data.keys().hasAll(['userId', 'text', 'sender', 'timestamp'])
+        && data.userId == request.auth.uid
+        && data.text is string && data.text.size() > 0 && data.text.size() <= 2000
+        && data.sender in ['user', 'ai']
+        && data.timestamp == request.time;
+    }
+
+    // --- Collection Rules ---
+
+    match /test/connection {
+      allow get: if true;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) 
+        && isValidUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'location', 'landSize', 'crops']);
+    }
+
+    match /scans/{scanId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidScan(incoming());
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if isSignedIn() && isValidFeedback(incoming());
+    }
+
+    match /chats/{chatId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(chatId) && isValidChat(incoming());
+    }
+  }
+}

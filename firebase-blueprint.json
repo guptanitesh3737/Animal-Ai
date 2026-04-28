@@ -1,0 +1,61 @@
+/**
+ * Defines the structure of the FirebaseBlueprint configuration.
+ */
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Farmer profile data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "landSize": { "type": "number" },
+        "language": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "location"]
+    },
+    "Scan": {
+      "title": "Crop Scan",
+      "description": "Records of crop disease detection",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "cropName": { "type": "string" },
+        "diseaseName": { "type": "string" },
+        "severity": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "diseaseName", "timestamp"]
+    },
+    "Chat": {
+      "title": "AI Conversation",
+      "description": "History of chat with AI advisor",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "message": { "type": "string" },
+        "sender": { "type": "string", "enum": ["user", "ai"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "message", "sender", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Collection of farmer profiles"
+    },
+    "scans/{scanId}": {
+      "schema": "Scan",
+      "description": "History of crop scans"
+    },
+    "chats/{chatId}": {
+      "schema": "Chat",
+      "description": "AI conversation history"
+    }
+  }
+}
